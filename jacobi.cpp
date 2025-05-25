@@ -64,13 +64,28 @@ double calcNext(double* A, double* Anew, int m, int n)
 {
     double error = 0.0;
     
-    #pragma acc parallel loop collapse(2) present(A, Anew) reduction(max:error)
+    #pragma acc parallel loop collapse(2) present(A, Anew) // reduction(max:error)
     for(int j = 1; j < n-1; j++)
     {
         for(int i = 1; i < m-1; i++)
         {
             Anew[OFFSET(j, i, m)] = 0.25 * (A[OFFSET(j, i+1, m)] + A[OFFSET(j, i-1, m)]
                                    + A[OFFSET(j-1, i, m)] + A[OFFSET(j+1, i, m)]);
+            //error = fmax(error, fabs(Anew[OFFSET(j, i, m)] - A[OFFSET(j, i, m)]));
+        }
+    }
+    return error;
+}
+
+double calcError(double* A, double* Anew, int m, int n)
+{
+    double error = 0.0;
+    
+    #pragma acc parallel loop collapse(2) present(A, Anew) reduction(max:error)
+    for(int j = 1; j < n-1; j++)
+    {
+        for(int i = 1; i < m-1; i++)
+        {
             error = fmax(error, fabs(Anew[OFFSET(j, i, m)] - A[OFFSET(j, i, m)]));
         }
     }
@@ -125,7 +140,8 @@ int main(int argc, char** argv)
         while(error > tol && iter < iter_max)
         {
             nvtxRangePushA("calc");
-            error = calcNext(A, Anew, m, n);
+            //error = calcNext(A, Anew, m, n);
+            calcNext(A, Anew, m, n);
             nvtxRangePop();
 
             nvtxRangePushA("swap");
@@ -134,7 +150,13 @@ int main(int argc, char** argv)
             std::swap(A, Anew);
             nvtxRangePop();
 
-            if(iter % 10000 == 0) printf("%5d, %0.6f\n", iter, error);
+            if(iter % 1000 == 0) 
+            {
+                nvtxRangePushA("error calc");
+                error = calcError(A, Anew, m, n);
+                nvtxRangePop();
+                printf("%5d, %0.6f\n", iter, error);
+            }
             iter++;
         }
         nvtxRangePop();
