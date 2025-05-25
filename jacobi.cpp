@@ -91,8 +91,8 @@ void swap(double* A, double* Anew, int m, int n)
 
 int main(int argc, char** argv)
 {
-    int n = 4096;
-    int m = 4096;
+    int n = 512;
+    int m = 512;
     const int iter_max = 1000000;
 
     if(argc > 1) n = atoi(argv[1]);
@@ -129,10 +129,12 @@ int main(int argc, char** argv)
             nvtxRangePop();
 
             nvtxRangePushA("swap");
-            swap(A, Anew, m, n);
+            //swap(A, Anew, m, n);
+            #pragma acc data present(A, Anew)
+            std::swap(A, Anew);
             nvtxRangePop();
 
-            if(iter % 100 == 0) printf("%5d, %0.6f\n", iter, error);
+            if(iter % 10000 == 0) printf("%5d, %0.6f\n", iter, error);
             iter++;
         }
         nvtxRangePop();
