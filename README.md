@@ -13,7 +13,7 @@
 - <b>./build-multi/laplace</b> для CPU-multicore</br>
 - <b>./build-gpu/laplace</b> для GPU</br>
 
-<\br>
-<\br>
-<\br>
+</br>
+</br>
+</br>
 (Выходную матрицу в файле <b>out_matxr.txt</b> можно визуализировать с помощью laplace_parser.py)
