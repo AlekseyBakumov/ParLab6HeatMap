@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
 #include <fstream>
 #include <math.h>
 #include <memory>
@@ -8,8 +9,46 @@
 #include <openacc.h>
 #include <cublas_v2.h>
 #include <nvtx3/nvToolsExt.h>
+#include <boost/program_options.hpp>
+
+namespace po = boost::program_options;
 
 #define OFFSET(x, y, m) (((x)*(m)) + (y))
+
+struct SimulationParams {
+    int n = 4096;
+    int m = 4096;
+    int iter_max = 1000;
+    double tol = 1.0e-6;
+};
+
+SimulationParams parse_args(int argc, char** argv) {
+    SimulationParams params;
+    po::options_description desc("Allowed options");
+    desc.add_options()
+        ("help,h", "Show this help message")
+        ("size-x,n", po::value<int>(&params.n)->default_value(512)) 
+        ("size-y,m", po::value<int>(&params.m)->default_value(512))
+        ("iterations,i", po::value<int>(&params.iter_max)->default_value(1000000))
+        ("tolerance,t", po::value<double>(&params.tol)->default_value(1.0e-6));
+
+    po::variables_map vm;
+    try {
+        po::store(po::parse_command_line(argc, argv, desc), vm);
+        po::notify(vm);
+
+        if (vm.count("help")) {
+            std::cout << desc << "\n";
+            exit(0);
+        }
+    } catch (const po::error& e) {
+        std::cout << "Error: " << e.what() << "\n";
+        std::cout << desc << "\n";
+        exit(1);
+    }
+
+    return params;
+}
 
 void initialize(double* A, double* Anew, int m, int n)
 {
@@ -138,14 +177,13 @@ void swap(double* A, double* Anew, int m, int n)
 
 int main(int argc, char** argv)
 {
-    int n = 512;
-    int m = 512;
-    const int iter_max = 1000000;
+    SimulationParams params = parse_args(argc, argv);
 
-    if(argc > 1) n = atoi(argv[1]);
-    if(argc > 2) m = atoi(argv[2]);
+    int n = params.n;
+    int m = params.m;
+    const int iter_max = params.iter_max;
+    const double tol = params.tol;
 
-    const double tol = 1.0e-6;
     double error = 1.0;
 
     auto A_sh = std::shared_ptr<double[]>(new double[n*m]);
