@@ -1,9 +1,9 @@
 <h3>Лаб 6: Распределение тепла с OpenACC</h3>
 
 Создать build папку:
-- cmake -Bbuild-cpu -DCMAKE_CXX_COMPILER=nvc++ -DPAR_MODE="host"
-- cmake -Bbuild-multi -DCMAKE_CXX_COMPILER=nvc++ -DPAR_MODE="multicore"
-- cmake -Bbuild-gpu -DCMAKE_CXX_COMPILER=nvc++ -DPAR_MODE="gpu"
+- cmake -DACCTYPE=HOST -DCUBLAS=ON -Bbuild-cpu -S .
+- cmake -DACCTYPE=MULTICORE -DCUBLAS=ON -Bbuild-multi -S .
+- cmake -DACCTYPE=GPU -DCUBLAS=ON -Bbuild-gpu -S .
 </br>
 (cpu - однопоточное исполнение, multi - многопоточное, gpu - на видеокарте)</br>
 </br>
