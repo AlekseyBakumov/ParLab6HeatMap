@@ -1,39 +1,43 @@
-cmake_minimum_required(VERSION 3.16)
-project(jacobi_openacc LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.22)
 
-# OpenACC backend selector
-set(PAR_MODE "gpu" CACHE STRING "OpenACC target backend (host, multicore, gpu)")
-set_property(CACHE PAR_MODE PROPERTY STRINGS host multicore gpu)
+project(Example_class VERSION 1.0 LANGUAGES CXX)
 
-# Use NVIDIA HPC compiler
-if (NOT CMAKE_CXX_COMPILER MATCHES "nvc\\+\\+")
-    message(FATAL_ERROR "You must use NVIDIA HPC compiler (nvc++) for OpenACC")
+set(CMAKE_CXX_COMPILER "pgc++")
+set(NAME "laplace")
+
+message(STATUS "Compile C++: " ${CMAKE_CXX_COMPILER})
+
+option(CUBLAS "Using cuBLAS" OFF)
+set(ACCTYPE "HOST" CACHE STRING "Type of accelerator: HOST, MULTICORE, GPU")
+
+find_package(Boost  REQUIRED COMPONENTS program_options)
+
+if(ACCTYPE STREQUAL "HOST")
+    message(STATUS "Build ACCTYPE=HOST")
+    list(APPEND option_compile -acc=host -Minfo=all)
+    list(APPEND option_link -acc=host)
+elseif(ACCTYPE STREQUAL "MULTICORE")
+    message(STATUS "Build ACCTYPE=MULTICORE")
+    list(APPEND option_compile -acc=multicore -Minfo=all)
+    list(APPEND option_link -acc=multicore)
+elseif(ACCTYPE STREQUAL "GPU")
+    message(STATUS "Build ACCTYPE=GPU")
+    list(APPEND option_compile -acc=gpu -Minfo=all)
+    list(APPEND option_link -acc=gpu)
 endif()
 
-# Enable OpenACC
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Minfo=accel -fast -lm")
-
-# Select backend
-if (PAR_MODE STREQUAL "gpu")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -acc=gpu")
-elseif (PAR_MODE STREQUAL "multicore")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -acc=multicore")
-elseif (PAR_MODE STREQUAL "host")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -acc=host")
-elseif (PAR_MODE STREQUAL "nopar")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -acc=noautopar")
-else()
-    message(FATAL_ERROR "Unknown PAR_MODE value: ${PAR_MODE}")
+add_executable(${NAME} "jacobi.cpp") 
+target_compile_features(${NAME} PRIVATE cxx_std_20)
+# Boost
+target_link_libraries(${NAME} PRIVATE Boost::program_options)
+# openACC
+target_compile_options(${NAME} PRIVATE ${option_compile}) 
+target_link_options(${NAME} PRIVATE ${option_link})
+# CUDA and cuBLAS
+if(CUBLAS AND ACCTYPE STREQUAL "GPU")
+    message(STATUS "Build cuBLAS version")
+    find_package(CUDAToolkit REQUIRED)
+    target_compile_definitions(${NAME} PRIVATE CUBLAS)
+    target_include_directories(${NAME} PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
+    target_link_libraries(${NAME} PRIVATE CUDA::cublas)
 endif()
-
-
-
-
-add_executable(laplace
-                jacobi.cpp
-                #laplace2d.cpp
-                )
-
-
-#target_include_directories(laplace PRIVATE ${Boost_INCLUDE_DIRS})
-#target_link_libraries(laplace PRIVATE ${Boost_LIBRARIES})
