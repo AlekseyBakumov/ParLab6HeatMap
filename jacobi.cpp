@@ -96,22 +96,21 @@ double calcError(double* A, double* Anew, int m, int n, double* diff)
     ///*
     cublasHandle_t handle;
     cublasCreate(&handle);
-    int size = (n-2)*(m-2);
 
-    #pragma acc data present(A[0:n*m], Anew[0:n*m], diff[0:size])
+    #pragma acc data present(A[0:n*m], Anew[0:n*m], diff[0:n*m])
     {
         #pragma acc host_data use_device(A, Anew, diff)
         {
             double alpha = 1.0;
             double beta = -1.0;
             cublasDgeam(handle, CUBLAS_OP_N, CUBLAS_OP_N,
-                       m-2, n-2, &alpha,
-                       &Anew[OFFSET(1, 1, m)], m,
-                       &beta, &A[OFFSET(1, 1, m)], m,
-                       diff, m-2);
+                       m, n, 
+                       &alpha, Anew, m,
+                       &beta,  A,    m,
+                               diff, m);
             
             int result;
-            cublasIdamax(handle, size, diff, 1, &result);
+            cublasIdamax(handle, n*m, diff, 1, &result);
             
             double max_diff;
             cublasGetVector(1, sizeof(double), &diff[result-1], 1, &max_diff, 1);
@@ -151,7 +150,7 @@ int main(int argc, char** argv)
 
     auto A_sh = std::shared_ptr<double[]>(new double[n*m]);
     auto Anew_sh = std::shared_ptr<double[]>(new double[n*m]);
-    auto diff_ptr = std::shared_ptr<double[]>(new double[(n-2)*(m-2)]);
+    auto diff_ptr = std::shared_ptr<double[]>(new double[n*m]);
 
     double* A = A_sh.get();
     double* Anew = Anew_sh.get();
@@ -167,7 +166,7 @@ int main(int argc, char** argv)
     int iter = 0;
 
     nvtxRangePushA("ACC Copy");
-    #pragma acc data copy(A[0:n*m], Anew[0:n*m], diff[0:(n-2)*(m-2)])
+    #pragma acc data copy(A[0:n*m], Anew[0:n*m], diff[0:n*m])
     {
         nvtxRangePop();
 
